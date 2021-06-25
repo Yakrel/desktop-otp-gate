@@ -86,6 +86,7 @@ simple-nginx-otp:
 ```
 
 ### 1c. Binary
+[Click here for the latest binaries](https://gitlab.com/jarylc/simple-nginx-otp/-/jobs/artifacts/master/browse?job=build)
 > Please change/remove `SNO_SECRET` and `SNO_YUBIOTP` accordingly as they are examples, run without both to generate a random `SNO_SECRET` for use.
 ```shell
 export UID=0
