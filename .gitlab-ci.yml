@@ -11,6 +11,7 @@ cache:
     - /go/src/
 
 stages:
+  - test
   - build
   - deploy
 
