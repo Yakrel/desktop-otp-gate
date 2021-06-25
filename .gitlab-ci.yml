@@ -1,0 +1,36 @@
+include:
+  - template: License-Scanning.gitlab-ci.yml
+  - template: Dependency-Scanning.gitlab-ci.yml
+  - template: SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
+image: golang:alpine
+
+cache:
+  paths:
+    - /go/src/
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  script:
+    - ./ci-build.sh
+  artifacts:
+    paths:
+      - '*.linux-*'
+
+deploy-latest:
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  image: docker:stable
+  services:
+    - name: docker:stable-dind
+      command: [ "--experimental" ]
+  script:
+    - ./ci-deploy.sh latest

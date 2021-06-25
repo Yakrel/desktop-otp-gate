@@ -1,0 +1,17 @@
+.idea
+.git
+.gitignore
+.gitlab
+
+*.iml
+
+*.md
+LICENSE
+
+*.png
+*.gif
+*.jpg
+readme/
+
+*.sh
+!entrypoint.sh
