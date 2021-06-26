@@ -16,6 +16,7 @@ type Config struct {
 	CookieName      string
 	CookieLength    int8
 	CookieLifetime  int16
+	CookieDomain    string
 	RateLimitCount  int8
 	RateLimitExpiry int16
 }
@@ -47,7 +48,7 @@ func GetConfig() (*Config, error) {
 	}
 
 	title := _getEnv("SNO_TITLE", "Simple Nginx OTP")
-	var html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>`+title+`</title><style>body{height:100vh;display:flex;justify-content:center;align-items:center}</style></head><body> <input id="auth" type="text"/> <button onclick="post()">Submit</button> <script>let auth=document.getElementById('auth');function post(){window.location.href="?otp="+auth.value;};auth.addEventListener("keyup",function(event){if(event.keyCode===13){post();}});</script> </body></html>`
+	var html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>` + title + `</title><style>body{height:100vh;display:flex;justify-content:center;align-items:center}</style></head><body> <input id="auth" type="text"/> <button onclick="post()">Submit</button> <script>let auth=document.getElementById('auth');function post(){window.location.href="?otp="+auth.value;};auth.addEventListener("keyup",function(event){if(event.keyCode===13){post();}});</script> </body></html>`
 
 	cookieName := _getEnv("SNO_COOKIE_NAME", "sno_session")
 
@@ -60,6 +61,8 @@ func GetConfig() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid SNO_COOKIE_LIFETIME\n%w", err)
 	}
+
+	cookieDomain := _getEnv("SNO_COOKIE_DOMAIN", "")
 
 	rateLimitCount, err := strconv.ParseInt(_getEnv("SNO_RATE_LIMIT_COUNT", "3"), 10, 8)
 	if err != nil {
@@ -80,6 +83,7 @@ func GetConfig() (*Config, error) {
 		CookieName:      cookieName,
 		CookieLength:    int8(cookieLength),
 		CookieLifetime:  int16(cookieLifetime),
+		CookieDomain:    cookieDomain,
 		RateLimitCount:  int8(rateLimitCount),
 		RateLimitExpiry: int16(rateLimitExpiry),
 	}

@@ -13,6 +13,7 @@ type Session struct {
 	Expiry     time.Time
 	Authorized bool
 }
+
 var sessions = make(map[string]*Session)
 var sessionsMutex = sync.Mutex{}
 
@@ -28,12 +29,15 @@ func NewSession(conf *config.Config) (*Session, *fiber.Cookie, error) {
 	cookie := new(fiber.Cookie)
 	cookie.Name = conf.CookieName
 	cookie.Value = session
-	cookie.Expires = time.Now().Add(time.Hour * time.Duration(24 * conf.CookieLifetime))
+	cookie.Expires = time.Now().Add(time.Hour * time.Duration(24*conf.CookieLifetime))
+	if conf.CookieDomain != "" {
+		cookie.Domain = conf.CookieDomain
+	}
 
 	sessions[session] = &Session{
-		Redirect: "/",
+		Redirect:   "/",
 		Authorized: false,
-		Expiry: cookie.Expires,
+		Expiry:     cookie.Expires,
 	}
 
 	return sessions[session], cookie, nil

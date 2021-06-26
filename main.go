@@ -19,8 +19,8 @@ func main() {
 	}
 
 	app := fiber.New(fiber.Config{
-		DisableStartupMessage:     true,
-		ReduceMemoryUsage:         true,
+		DisableStartupMessage: true,
+		ReduceMemoryUsage:     true,
 	})
 
 	app.Get("/favicon.ico", func(c *fiber.Ctx) error {
@@ -47,7 +47,7 @@ func main() {
 			var err error
 			session, cookie, err = sessions.NewSession(conf)
 			if err != nil {
-				return fmt.Errorf("unable to create session for IP `%s`\n%w", ip, err)
+				return fmt.Errorf("`%s` session creation failed\n%w", ip, err)
 			}
 			c.Cookie(cookie)
 		}
@@ -61,16 +61,16 @@ func main() {
 
 			if (len(otp) == 6 && conf.Secret != "" && totp.Validate(otp, conf.Secret)) || (len(otp) >= 6 && conf.YubiOTP != "" && yubikey2.Validate(otp, conf.YubiOTP)) {
 				session.Authorized = true
-				println(session.Redirect)
+				log.Printf("`%s` successfully logged in, redirecting to `%s`", ip, session.Redirect)
 				_ = c.Redirect(session.Redirect)
 				return nil
 			}
-			log.Printf("invalid OTP from `%s`", ip)
+			log.Printf("`%s` sent invalid OTP", ip)
 		}
 
 		redirect := c.Get("X-Original-URI", "")
-		println(c.BaseURL() + c.OriginalURL())
-		if redirect != "" && redirect != c.BaseURL() + c.OriginalURL() {
+		if redirect != "" && redirect != c.BaseURL()+c.OriginalURL() {
+			log.Printf("`%s` attempting to access `%s`", ip, redirect)
 			buffer := make([]byte, len(redirect))
 			copy(buffer, redirect)
 			session.Redirect = string(buffer)

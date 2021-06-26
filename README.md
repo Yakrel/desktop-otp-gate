@@ -28,6 +28,7 @@ A simple Nginx OTP module for use with `auth_request`
 | SNO_COOKIE_NAME | sno_session | Session cookie name |
 | SNO_COOKIE_LENGTH | 16 | Session cookie length (recommended >=16) |
 | SNO_COOKIE_LIFETIME | 14 | Session cookie lifetime in days |
+| SNO_COOKIE_DOMAIN | | Session cookie domain. If empty, default to current domain |
 | SNO_RATE_LIMIT_COUNT | 3 | How many failures till rate limit kicks in |
 | SNO_RATE_LIMIT_LIFETIME | 1 | Rate limit lifetime in minutes |
 
@@ -54,6 +55,7 @@ docker run -d \
   -e SNO_COOKIE_NAME=sno_session \
   -e SNO_COOKIE_LENGTH=16 \
   -e SNO_COOKIE_LIFETIME=14 \
+  -e SNO_COOKIE_DOMAIN="" \
   -e SNO_RATE_LIMIT_COUNT=3 \
   -e SNO_RATE_LIMIT_LIFETIME=1 \
   -p 7079:7079 \
@@ -80,6 +82,7 @@ simple-nginx-otp:
         - SNO_COOKIE_NAME=sno_session
         - SNO_COOKIE_LENGTH=16
         - SNO_COOKIE_LIFETIME=14
+        - SNO_COOKIE_DOMAIN=""
         - SNO_RATE_LIMIT_COUNT=3
         - SNO_RATE_LIMIT_LIFETIME=1
     restart: unless-stopped
@@ -99,6 +102,7 @@ export SNO_TITLE="Simple Nginx OTP"
 export SNO_COOKIE_NAME=sno_session
 export SNO_COOKIE_LENGTH=16
 export SNO_COOKIE_LIFETIME=14
+export SNO_COOKIE_DOMAIN=""
 export SNO_RATE_LIMIT_COUNT=3
 export SNO_RATE_LIMIT_LIFETIME=1
 ./simple-nginx-otp.linux-(arch)
