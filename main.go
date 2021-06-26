@@ -28,7 +28,7 @@ func main() {
 		_ = c.Type("png").Send(decode)
 		return nil
 	})
-	app.Get("/+", func(c *fiber.Ctx) error {
+	app.Get("*", func(c *fiber.Ctx) error {
 		ip := c.IP()
 		if len(c.IPs()) > 0 {
 			ip = c.IPs()[0]
