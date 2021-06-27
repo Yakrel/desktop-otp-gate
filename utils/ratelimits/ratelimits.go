@@ -8,9 +8,10 @@ import (
 )
 
 type RateLimit struct {
-	Count int8
+	Count  int8
 	Expiry time.Time
 }
+
 var rateLimits = make(map[string]*RateLimit)
 var rateLimitsMutex = sync.Mutex{}
 
@@ -18,13 +19,10 @@ func IsLimited(conf *config.Config, ip string) bool {
 	rateLimitsMutex.Lock()
 	defer rateLimitsMutex.Unlock()
 	_prune()
-	buffer := make([]byte, len(ip))
-	copy(buffer, ip)
-	ip = string(buffer)
 	rateLimit, ok := rateLimits[ip]
 	if !ok {
 		rateLimit = &RateLimit{
-			Count:  1,
+			Count: 1,
 		}
 	} else {
 		rateLimit.Count++

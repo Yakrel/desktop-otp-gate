@@ -47,6 +47,9 @@ func GetSession(cookie string) *Session {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
 	_prune()
+	if cookie == "" {
+		return nil
+	}
 	session, ok := sessions[cookie]
 	if !ok {
 		return nil
