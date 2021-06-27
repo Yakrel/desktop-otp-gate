@@ -30,7 +30,7 @@ func IsLimited(conf *config.Config, ip string) bool {
 	rateLimit.Expiry = time.Now().Add(time.Duration(conf.RateLimitExpiry) * time.Minute)
 	rateLimits[ip] = rateLimit
 	if rateLimit.Count == conf.RateLimitCount {
-		log.Printf("rate limited ip `%s`", ip)
+		log.Printf("`%s` has been rate limited", ip)
 	}
 	return rateLimit.Count > conf.RateLimitCount
 }

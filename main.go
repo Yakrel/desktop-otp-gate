@@ -48,12 +48,12 @@ func main() {
 		}
 
 		// auth_request coming from nginx with X-Original-URI header
+		_, exist := lastURL[ip]
+		if !exist {
+			lastURL[ip] = "/"
+		}
 		redirect := c.Get("X-Original-URI", "")
 		if redirect != "" {
-			_, exist := lastURL[ip]
-			if !exist {
-				lastURL[ip] = "/"
-			}
 			if redirect != c.BaseURL()+c.OriginalURL() {
 				buffer := make([]byte, len(redirect))
 				copy(buffer, redirect)
@@ -80,18 +80,15 @@ func main() {
 		// check otp query param
 		otp := c.Query("otp")
 		if otp != "" {
-			if ratelimits.IsLimited(conf, ip) {
-				c.Status(429).Type("txt", "UTF-8")
-				return nil
+			log.Printf("`%s` attempted authentication", ip)
+			if !ratelimits.IsLimited(conf, ip) {
+				if (len(otp) == 6 && conf.Secret != "" && totp.Validate(otp, conf.Secret)) || (len(otp) >= 6 && conf.YubiOTP != "" && yubikey.Validate(otp, conf.YubiOTP)) {
+					session.Authorized = true
+					log.Printf("`%s` successfully logged in, redirecting to `%s`", ip, session.Redirect)
+					_ = c.Redirect(session.Redirect)
+					return nil
+				}
 			}
-
-			if (len(otp) == 6 && conf.Secret != "" && totp.Validate(otp, conf.Secret)) || (len(otp) >= 6 && conf.YubiOTP != "" && yubikey.Validate(otp, conf.YubiOTP)) {
-				session.Authorized = true
-				log.Printf("`%s` successfully logged in, redirecting to `%s`", ip, session.Redirect)
-				_ = c.Redirect(session.Redirect)
-				return nil
-			}
-			log.Printf("`%s` sent invalid OTP", ip)
 		}
 
 		// return form

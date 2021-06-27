@@ -48,7 +48,7 @@ func GetConfig() (*Config, error) {
 	}
 
 	title := _getEnv("SNO_TITLE", "Simple Nginx OTP")
-	var html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>` + title + `</title><style>body{height:100vh;display:flex;justify-content:center;align-items:center}</style></head><body> <input id="auth" type="text"/> <button onclick="post()">Submit</button> <script>let auth=document.getElementById('auth');function post(){window.location.href="?otp="+auth.value;};auth.addEventListener("keyup",function(event){if(event.keyCode===13){post();}});</script> </body></html>`
+	var html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>` + title + `</title><style>body{height:100vh;display:flex;justify-content:center;align-items:center}</style></head><body> <input id="auth" type="text" autofocus/> <button onclick="post()">Submit</button> <script>let auth=document.getElementById('auth');function post(){window.location.href="?otp="+auth.value;};auth.addEventListener("keyup",function(event){if(event.keyCode===13){post();}});</script> </body></html>`
 
 	cookieName := _getEnv("SNO_COOKIE_NAME", "sno_session")
 
