@@ -50,14 +50,17 @@ func main() {
 		// auth_request coming from nginx with X-Original-URI header
 		redirect := c.Get("X-Original-URI", "")
 		if redirect != "" {
-			lastURL[ip] = "/"
+			_, exist := lastURL[ip]
+			if !exist {
+				lastURL[ip] = "/"
+			}
 			if redirect != c.BaseURL()+c.OriginalURL() {
 				buffer := make([]byte, len(redirect))
 				copy(buffer, redirect)
 				lastURL[ip] = string(buffer)
+				c.Status(401).Type("html", "UTF-8")
+				return nil
 			}
-			c.Status(401).Type("html", "UTF-8")
-			return nil
 		}
 
 		// user is redirected to SNO
