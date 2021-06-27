@@ -20,7 +20,6 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
-		ReduceMemoryUsage:     true,
 	})
 
 	app.Get("/favicon.ico", func(c *fiber.Ctx) error {
@@ -50,6 +49,7 @@ func main() {
 				return fmt.Errorf("`%s` session creation failed\n%w", ip, err)
 			}
 			c.Cookie(cookie)
+			log.Printf("`%s` new request", ip)
 		}
 
 		otp := c.Query("otp")
@@ -70,10 +70,10 @@ func main() {
 
 		redirect := c.Get("X-Original-URI", "")
 		if redirect != "" && redirect != c.BaseURL()+c.OriginalURL() {
-			log.Printf("`%s` attempting to access `%s`", ip, redirect)
 			buffer := make([]byte, len(redirect))
 			copy(buffer, redirect)
 			session.Redirect = string(buffer)
+			log.Printf("`%s` is attempting to access `%s`", ip, session.Redirect)
 		}
 
 		_ = c.Status(401).Type("html", "UTF-8").Send(conf.HTML)

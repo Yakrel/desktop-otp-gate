@@ -44,10 +44,9 @@ func NewSession(conf *config.Config) (*Session, *fiber.Cookie, error) {
 }
 
 func GetSession(cookie string) *Session {
-	_prune()
-
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
+	_prune()
 	session, ok := sessions[cookie]
 	if !ok {
 		return nil
