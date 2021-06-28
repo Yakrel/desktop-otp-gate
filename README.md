@@ -42,9 +42,10 @@ A simple Nginx OTP module for use with `auth_request`
 To get a local copy up and running follow these simple steps.
 > Make sure to only allow nginx to access the application!
 
+> Please change/ `SNO_SECRET` and `SNO_YUBIOTP` accordingly as they are examples, run without both to generate a random `SNO_SECRET` for use.
+
 ### 1a. Docker Run
 ```shell
-> Please change/remove `SNO_SECRET` and `SNO_YUBIOTP` accordingly as they are examples, run without both to generate a random `SNO_SECRET` for use.
 docker run -d \
   --name simple-nginx-otp \
   -e SNO_LISTEN_IP=0.0.0.0 \
