@@ -18,23 +18,23 @@ A simple Nginx OTP module for use with `auth_request`
 - Rate limiting support
 
 ### Environment Variables
-| Environment | Default value | Description
-|---|---|---|
-| SNO_LISTEN_IP | 0.0.0.0 | IP which SNO will listen at |
-| SNO_LISTEN_PORT | 7079 | Port which SNO will listen at |
-| SNO_SECRET | | OTP secret key. Enables TOTP functionality if not empty. If both this and `SNO_YUBIOTP` are empty, application will reply a random one for use and exit |
-| SNO_YUBIOTP | | One example of your YubiOTP. Enables YubiOTP functionality if not empty. Only the first 12 characters are used |
-| SNO_TITLE | Simple Nginx OTP | Page title on OTP entry page |
-| SNO_COOKIE_NAME | sno_session | Session cookie name |
-| SNO_COOKIE_LENGTH | 16 | Session cookie length (recommended >=16) |
-| SNO_COOKIE_LIFETIME | 14 | Session cookie lifetime in days |
-| SNO_COOKIE_DOMAIN | | Session cookie domain. If empty, default to current domain |
-| SNO_RATE_LIMIT_COUNT | 3 | How many failures till rate limit kicks in |
-| SNO_RATE_LIMIT_LIFETIME | 1 | Rate limit lifetime in minutes |
+| Environment             | Default value    | Description                                                                                                                                             |
+|-------------------------|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| SNO_LISTEN_IP           | 0.0.0.0          | IP which SNO will listen at                                                                                                                             |
+| SNO_LISTEN_PORT         | 7079             | Port which SNO will listen at                                                                                                                           |
+| SNO_SECRET              |                  | OTP secret key. Enables TOTP functionality if not empty. If both this and `SNO_YUBIOTP` are empty, application will reply a random one for use and exit |
+| SNO_YUBIOTP             |                  | One example of your YubiOTP. Enables YubiOTP functionality if not empty. Only the first 12 characters are used                                          |
+| SNO_TITLE               | Simple Nginx OTP | Page title on OTP entry page                                                                                                                            |
+| SNO_COOKIE_NAME         | sno_session      | Session cookie name                                                                                                                                     |
+| SNO_COOKIE_LENGTH       | 16               | Session cookie length (recommended >=16)                                                                                                                |
+| SNO_COOKIE_LIFETIME     | 14               | Session cookie lifetime in days                                                                                                                         |
+| SNO_COOKIE_DOMAIN       |                  | Session cookie domain. If empty, default to current domain                                                                                              |
+| SNO_RATE_LIMIT_COUNT    | 3                | How many failures till rate limit kicks in                                                                                                              |
+| SNO_RATE_LIMIT_LIFETIME | 1                | Rate limit lifetime in minutes                                                                                                                          |
 
 ### Built With
 * [golang](https://golang.org/)
-* [gofiber/fiber](https://github.com/gofiber/fiber)
+* [go-chi/chi](https://github.com/go-chi/chi)
 * [pquerna/otp](https://github.com/pquerna/otp)
 
 

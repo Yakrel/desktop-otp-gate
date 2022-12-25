@@ -1,7 +1,7 @@
 package sessions
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"net/http"
 	"simple-nginx-otp/utils/config"
 	"simple-nginx-otp/utils/rand"
 	"sync"
@@ -17,7 +17,7 @@ type Session struct {
 var sessions = make(map[string]*Session)
 var sessionsMutex = sync.Mutex{}
 
-func NewSession(conf *config.Config) (*Session, *fiber.Cookie, error) {
+func NewSession(conf *config.Config) (*Session, *http.Cookie, error) {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
 
@@ -26,7 +26,7 @@ func NewSession(conf *config.Config) (*Session, *fiber.Cookie, error) {
 		return nil, nil, err
 	}
 
-	cookie := new(fiber.Cookie)
+	cookie := new(http.Cookie)
 	cookie.Name = conf.CookieName
 	cookie.Value = session
 	cookie.Expires = time.Now().Add(time.Hour * time.Duration(24*conf.CookieLifetime))

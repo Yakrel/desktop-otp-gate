@@ -3,13 +3,15 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
+	"github.com/go-chi/chi/v5"
 	"github.com/pquerna/otp/totp"
 	"log"
+	"net/http"
 	"simple-nginx-otp/utils/config"
 	"simple-nginx-otp/utils/ratelimits"
 	"simple-nginx-otp/utils/sessions"
 	"simple-nginx-otp/utils/yubikey"
+	"strings"
 )
 
 var lastURL = make(map[string]string)
@@ -20,31 +22,34 @@ func main() {
 		log.Fatal(err)
 	}
 
-	app := fiber.New(fiber.Config{
-		DisableStartupMessage: true,
-	})
+	router := chi.NewRouter()
 
-	app.Get("/favicon.ico", func(c *fiber.Ctx) error {
+	router.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		decode, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAABlBMVEVWAAAErtouO1BUAAAAAXRSTlMAQObYZgAAAC1JREFUCNdjYD7AwGPAYMDDoHiEwS2JwUWJoUWRof8jFPl/AiEFFpACoDLmAwAcwAw1QCe40wAAAABJRU5ErkJggg==")
-		_ = c.Type("png").Send(decode)
-		return nil
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(decode)
 	})
-	app.Get("*", func(c *fiber.Ctx) error {
-		ip := c.IP()
-		if len(c.IPs()) > 0 {
-			ip = c.IPs()[0]
+	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		ip := r.Header.Get("X-Real-Ip")
+		if ip == "" && r.Header.Get("X-Forwarded-For") != "" {
+			split := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+			ip = split[0]
 		}
-		buffer := make([]byte, len(ip))
-		copy(buffer, ip)
-		ip = string(buffer)
+		if ip == "" {
+			ip = r.RemoteAddr
+		}
+		ip = strings.Split(ip, ":")[0]
 
-		cookie := c.Cookies(conf.CookieName)
-		session := sessions.GetSession(cookie)
+		var session *sessions.Session
+		cookie, err := r.Cookie(conf.CookieName)
+		if err == nil && cookie != nil {
+			session = sessions.GetSession(cookie.Value)
+		}
 
 		// already authorized, send 200
 		if session != nil && session.Authorized {
-			c.Status(200).Type("txt", "UTF-8")
-			return nil
+			w.WriteHeader(200)
+			return
 		}
 
 		// auth_request coming from nginx with X-Original-URI header
@@ -52,50 +57,57 @@ func main() {
 		if !exist {
 			lastURL[ip] = "/"
 		}
-		redirect := c.Get("X-Original-URI", "")
+		redirect := r.Header.Get("X-Original-URI")
 		if redirect != "" {
-			if redirect != c.BaseURL()+c.OriginalURL() {
+			if redirect != r.URL.RequestURI() {
 				buffer := make([]byte, len(redirect))
 				copy(buffer, redirect)
 				lastURL[ip] = string(buffer)
-				c.Status(401).Type("html", "UTF-8")
-				return nil
+				w.WriteHeader(401)
+				return
 			}
 		}
 
 		// user is redirected to SNO
 		if session == nil {
-			var cookie *fiber.Cookie
+			var cookie *http.Cookie
 			var err error
 			session, cookie, err = sessions.NewSession(conf)
 			if err != nil {
-				return fmt.Errorf("`%s` session creation failed\n%w", ip, err)
+				w.WriteHeader(500)
+				w.Write([]byte(err.Error()))
+				return
 			}
 			session.Redirect = lastURL[ip]
 			delete(lastURL, ip)
 			log.Printf("`%s` is attempting to access `%s`", ip, session.Redirect)
-			c.Cookie(cookie)
+			w.Header().Set("Set-Cookie", cookie.String())
 		}
 
 		// check otp query param
-		otp := c.Query("otp")
+		otp := r.URL.Query().Get("otp")
 		if otp != "" {
 			log.Printf("`%s` attempted authentication", ip)
 			if !ratelimits.IsLimited(conf, ip) {
 				if (len(otp) == 6 && conf.Secret != "" && totp.Validate(otp, conf.Secret)) || (len(otp) >= 6 && conf.YubiOTP != "" && yubikey.Validate(otp, conf.YubiOTP)) {
 					session.Authorized = true
 					log.Printf("`%s` successfully logged in, redirecting to `%s`", ip, session.Redirect)
-					_ = c.Redirect(session.Redirect)
-					return nil
+					http.Redirect(w, r, session.Redirect, 302)
+					return
 				}
 			}
 		}
 
 		// return form
-		_ = c.Status(401).Type("html", "UTF-8").Send(conf.HTML)
-		return nil
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(401)
+		w.Write(conf.HTML)
+		return
 	})
 
 	log.Printf("listening on http://%s:%d", conf.IP, conf.Port)
-	_ = app.Listen(fmt.Sprintf("%s:%d", conf.IP, conf.Port))
+	err = http.ListenAndServe(fmt.Sprintf("%s:%d", conf.IP, conf.Port), router)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
