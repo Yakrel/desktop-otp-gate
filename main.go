@@ -59,7 +59,7 @@ func main() {
 		}
 		redirect := r.Header.Get("X-Original-URI")
 		if redirect != "" {
-			if redirect != r.URL.RequestURI() {
+			if redirect != r.URL.Scheme+"://"+r.Host+r.RequestURI {
 				buffer := make([]byte, len(redirect))
 				copy(buffer, redirect)
 				lastURL[ip] = string(buffer)
