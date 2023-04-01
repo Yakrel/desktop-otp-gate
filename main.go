@@ -59,7 +59,10 @@ func main() {
 		}
 		redirect := r.Header.Get("X-Original-URI")
 		if redirect != "" {
-			if redirect != r.URL.Scheme+"://"+r.Host+r.RequestURI {
+			requestURL := r.URL.Scheme + "://" + r.Host + r.RequestURI
+			log.Printf("`%s` is attempting to access `%s`", ip, requestURL)
+			log.Printf("`%s` has X-Original-URI `%s`", ip, session.Redirect)
+			if redirect != requestURL {
 				buffer := make([]byte, len(redirect))
 				copy(buffer, redirect)
 				lastURL[ip] = string(buffer)
@@ -80,7 +83,7 @@ func main() {
 			}
 			session.Redirect = lastURL[ip]
 			delete(lastURL, ip)
-			log.Printf("`%s` is attempting to access `%s`", ip, session.Redirect)
+			log.Printf("`%s` was attempting to access `%s`", ip, session.Redirect)
 			w.Header().Set("Set-Cookie", cookie.String())
 		}
 
