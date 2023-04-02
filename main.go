@@ -59,10 +59,9 @@ func main() {
 		}
 		redirect := r.Header.Get("X-Original-URI")
 		if redirect != "" {
-			if r.TLS != nil {
+			r.URL.Scheme = r.Header.Get("X-Forwarded-Proto")
+			if r.URL.Scheme == "" {
 				r.URL.Scheme = "https"
-			} else {
-				r.URL.Scheme = "http"
 			}
 			requestURL := r.URL.Scheme + "://" + r.Host + r.RequestURI
 			log.Printf("`%s` is attempting to access `%s`", ip, requestURL)
