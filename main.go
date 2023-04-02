@@ -59,9 +59,14 @@ func main() {
 		}
 		redirect := r.Header.Get("X-Original-URI")
 		if redirect != "" {
+			if r.TLS != nil {
+				r.URL.Scheme = "https"
+			} else {
+				r.URL.Scheme = "http"
+			}
 			requestURL := r.URL.Scheme + "://" + r.Host + r.RequestURI
 			log.Printf("`%s` is attempting to access `%s`", ip, requestURL)
-			log.Printf("`%s` has X-Original-URI `%s`", ip, session.Redirect)
+			log.Printf("`%s` has X-Original-URI `%s`", ip, redirect)
 			if redirect != requestURL {
 				buffer := make([]byte, len(redirect))
 				copy(buffer, redirect)
