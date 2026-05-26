@@ -1,21 +1,19 @@
-# Simple Nginx OTP
-A simple Nginx OTP module for use with `auth_request`
+# Desktop OTP Gate
+A lightweight TOTP gate for Nginx `auth_request`, based on [jarylc/simple-nginx-otp](https://gitlab.com/jarylc/simple-nginx-otp).
 
-[**Docker Hub Image »**](https://hub.docker.com/r/jarylc/simple-nginx-otp)
+This fork keeps the original minimal reverse-auth design and adds a dark login screen, minute-based sessions, session-cookie mode, and stronger default cookie flags for the desktop workspace use case.
 
-[**Explore the docs »**](https://gitlab.com/jarylc/simple-nginx-otp)
-
-[Report Bugs](https://gitlab.com/jarylc/simple-nginx-otp/-/issues/new?issuable_template=Bug)
-· [Request Features](https://gitlab.com/jarylc/simple-nginx-otp/-/issues/new?issuable_template=Feature%20Request)
+[**Container Image »**](https://github.com/Yakrel/desktop-otp-gate/pkgs/container/desktop-otp-gate)
 
 
 ## About
 ### Features
 - Lightweight and fast
-- Returns a very simple form with a text field and submit button for OTP entry
+- Dark, mobile-friendly OTP login screen
 - Basic TOTP support
 - YubiOTP support
 - Rate limiting support
+- Minute-based session lifetime support
 
 ### Environment Variables
 | Environment             | Default value    | Description                                                                                                                                             |
@@ -27,7 +25,10 @@ A simple Nginx OTP module for use with `auth_request`
 | SNO_TITLE               | Simple Nginx OTP | Page title on OTP entry page                                                                                                                            |
 | SNO_COOKIE_NAME         | sno_session      | Session cookie name                                                                                                                                     |
 | SNO_COOKIE_LENGTH       | 16               | Session cookie length (recommended >=16)                                                                                                                |
-| SNO_COOKIE_LIFETIME     | 14               | Session cookie lifetime in days                                                                                                                         |
+| SNO_COOKIE_LIFETIME     | 14               | Session cookie lifetime in days. Ignored when `SNO_COOKIE_LIFETIME_MINUTES` is greater than zero                                                        |
+| SNO_COOKIE_LIFETIME_MINUTES | 0            | Session cookie lifetime in minutes. Use this for shorter sessions, for example `60` for one hour                                                        |
+| SNO_SESSION_COOKIE      | false            | If true, the browser cookie has no Expires attribute and lasts until the browser clears session cookies                                                  |
+| SNO_COOKIE_SECURE       | true             | Add the Secure flag to the session cookie                                                                                                                |
 | SNO_COOKIE_DOMAIN       |                  | Session cookie domain. If empty, default to current domain                                                                                              |
 | SNO_RATE_LIMIT_COUNT    | 3                | How many failures till rate limit kicks in                                                                                                              |
 | SNO_RATE_LIMIT_LIFETIME | 1                | Rate limit lifetime in minutes                                                                                                                          |
@@ -55,20 +56,22 @@ docker run -d \
   -e SNO_TITLE="Simple Nginx OTP" \
   -e SNO_COOKIE_NAME=sno_session \
   -e SNO_COOKIE_LENGTH=16 \
-  -e SNO_COOKIE_LIFETIME=14 \
+  -e SNO_COOKIE_LIFETIME_MINUTES=60 \
+  -e SNO_SESSION_COOKIE=false \
+  -e SNO_COOKIE_SECURE=true \
   -e SNO_COOKIE_DOMAIN="" \
   -e SNO_RATE_LIMIT_COUNT=3 \
   -e SNO_RATE_LIMIT_LIFETIME=1 \
   -p 7079:7079 \
   --restart unless-stopped \
-  jarylc/simple-nginx-otp
+  ghcr.io/yakrel/desktop-otp-gate:latest
 ```
 
 ### 1b. Docker-compose
 > Please change/remove `SNO_SECRET` and `SNO_YUBIOTP` accordingly as they are examples, run without both to generate a random `SNO_SECRET` for use.
 ```docker-compose
-simple-nginx-otp:
-    image: jarylc/simple-nginx-otp
+desktop-otp-gate:
+    image: ghcr.io/yakrel/desktop-otp-gate:latest
     user: nobody
     ports:
         - "7079:7079"
@@ -82,7 +85,9 @@ simple-nginx-otp:
         - SNO_TITLE="Simple Nginx OTP"
         - SNO_COOKIE_NAME=sno_session
         - SNO_COOKIE_LENGTH=16
-        - SNO_COOKIE_LIFETIME=14
+        - SNO_COOKIE_LIFETIME_MINUTES=60
+        - SNO_SESSION_COOKIE=false
+        - SNO_COOKIE_SECURE=true
         - SNO_COOKIE_DOMAIN=""
         - SNO_RATE_LIMIT_COUNT=3
         - SNO_RATE_LIMIT_LIFETIME=1
@@ -102,7 +107,9 @@ export SNO_YUBIOTP=vvvvvvcurikvhjcvnlnbecbkubjvuittbifhndhn
 export SNO_TITLE="Simple Nginx OTP"
 export SNO_COOKIE_NAME=sno_session
 export SNO_COOKIE_LENGTH=16
-export SNO_COOKIE_LIFETIME=14
+export SNO_COOKIE_LIFETIME_MINUTES=60
+export SNO_SESSION_COOKIE=false
+export SNO_COOKIE_SECURE=true
 export SNO_COOKIE_DOMAIN=""
 export SNO_RATE_LIMIT_COUNT=3
 export SNO_RATE_LIMIT_LIFETIME=1

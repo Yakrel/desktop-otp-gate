@@ -29,7 +29,17 @@ func NewSession(conf *config.Config) (*Session, *http.Cookie, error) {
 	cookie := new(http.Cookie)
 	cookie.Name = conf.CookieName
 	cookie.Value = session
-	cookie.Expires = time.Now().Add(time.Hour * time.Duration(24*conf.CookieLifetime))
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+	cookie.Secure = conf.CookieSecure
+	cookie.SameSite = http.SameSiteLaxMode
+	expiry := time.Now().Add(time.Hour * time.Duration(24*conf.CookieLifetime))
+	if conf.CookieMinutes > 0 {
+		expiry = time.Now().Add(time.Minute * time.Duration(conf.CookieMinutes))
+	}
+	if !conf.SessionCookie {
+		cookie.Expires = expiry
+	}
 	if conf.CookieDomain != "" {
 		cookie.Domain = conf.CookieDomain
 	}
@@ -37,7 +47,7 @@ func NewSession(conf *config.Config) (*Session, *http.Cookie, error) {
 	sessions[session] = &Session{
 		Redirect:   "/",
 		Authorized: false,
-		Expiry:     cookie.Expires,
+		Expiry:     expiry,
 	}
 
 	return sessions[session], cookie, nil
