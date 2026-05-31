@@ -3,18 +3,21 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"strings"
+	"sync"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/pquerna/otp/totp"
-	"log"
-	"net/http"
 	"simple-nginx-otp/utils/config"
 	"simple-nginx-otp/utils/ratelimits"
 	"simple-nginx-otp/utils/sessions"
 	"simple-nginx-otp/utils/yubikey"
-	"strings"
 )
 
-var lastURL = make(map[string]string)
+var lastURL sync.Map
 
 func main() {
 	conf, err := config.GetConfig()
@@ -25,7 +28,11 @@ func main() {
 	router := chi.NewRouter()
 
 	router.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		decode, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAABlBMVEVWAAAErtouO1BUAAAAAXRSTlMAQObYZgAAAC1JREFUCNdjYD7AwGPAYMDDoHiEwS2JwUWJoUWRof8jFPl/AiEFFpACoDLmAwAcwAw1QCe40wAAAABJRU5ErkJggg==")
+		decode, err := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAABlBMVEVWAAAErtouO1BUAAAAAXRSTlMAQObYZgAAAC1JREFUCNdjYD7AwGPAYMDDoHiEwS2JwUWJoUWRof8jFPl/AiEFFpACoDLmAwAcwAw1QCe40wAAAABJRU5ErkJggg==")
+		if err != nil {
+			w.WriteHeader(500)
+			return
+		}
 		w.Header().Set("Content-Type", "image/png")
 		w.Write(decode)
 	})
@@ -33,12 +40,14 @@ func main() {
 		ip := r.Header.Get("X-Real-Ip")
 		if ip == "" && r.Header.Get("X-Forwarded-For") != "" {
 			split := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
-			ip = split[0]
+			ip = strings.TrimSpace(split[0])
 		}
 		if ip == "" {
 			ip = r.RemoteAddr
 		}
-		ip = strings.Split(ip, ":")[0]
+		if host, _, err := net.SplitHostPort(ip); err == nil {
+			ip = host
+		}
 
 		var session *sessions.Session
 		cookie, err := r.Cookie(conf.CookieName)
@@ -53,9 +62,8 @@ func main() {
 		}
 
 		// auth_request coming from nginx with X-Original-URI header
-		_, exist := lastURL[ip]
-		if !exist {
-			lastURL[ip] = "/"
+		if _, exist := lastURL.Load(ip); !exist {
+			lastURL.Store(ip, "/")
 		}
 		redirect := r.Header.Get("X-Original-URI")
 		if redirect != "" {
@@ -67,9 +75,7 @@ func main() {
 			log.Printf("`%s` is attempting to access `%s`", ip, requestURL)
 			log.Printf("`%s` has X-Original-URI `%s`", ip, redirect)
 			if redirect != requestURL {
-				buffer := make([]byte, len(redirect))
-				copy(buffer, redirect)
-				lastURL[ip] = string(buffer)
+				lastURL.Store(ip, redirect)
 				w.WriteHeader(401)
 				return
 			}
@@ -81,12 +87,15 @@ func main() {
 			var err error
 			session, cookie, err = sessions.NewSession(conf)
 			if err != nil {
+				log.Printf("session creation failed: %v", err)
 				w.WriteHeader(500)
-				w.Write([]byte(err.Error()))
+				w.Write([]byte("Internal server error"))
 				return
 			}
-			session.Redirect = lastURL[ip]
-			delete(lastURL, ip)
+			if val, ok := lastURL.Load(ip); ok {
+				session.Redirect = val.(string)
+			}
+			lastURL.Delete(ip)
 			log.Printf("`%s` was attempting to access `%s`", ip, session.Redirect)
 			w.Header().Set("Set-Cookie", cookie.String())
 		}
@@ -105,8 +114,12 @@ func main() {
 			if !ratelimits.IsLimited(conf, ip) {
 				if (len(otp) == 6 && conf.Secret != "" && totp.Validate(otp, conf.Secret)) || (len(otp) >= 6 && conf.YubiOTP != "" && yubikey.Validate(otp, conf.YubiOTP)) {
 					session.Authorized = true
-					log.Printf("`%s` successfully logged in, redirecting to `%s`", ip, session.Redirect)
-					http.Redirect(w, r, session.Redirect, 302)
+					dest := session.Redirect
+					if !strings.HasPrefix(dest, "/") {
+						dest = "/"
+					}
+					log.Printf("`%s` successfully logged in, redirecting to `%s`", ip, dest)
+					http.Redirect(w, r, dest, 302)
 					return
 				}
 			}

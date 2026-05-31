@@ -15,6 +15,17 @@ type RateLimit struct {
 var rateLimits = make(map[string]*RateLimit)
 var rateLimitsMutex = sync.Mutex{}
 
+func init() {
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			rateLimitsMutex.Lock()
+			_prune()
+			rateLimitsMutex.Unlock()
+		}
+	}()
+}
+
 func IsLimited(conf *config.Config, ip string) bool {
 	rateLimitsMutex.Lock()
 	defer rateLimitsMutex.Unlock()

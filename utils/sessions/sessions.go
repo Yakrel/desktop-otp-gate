@@ -17,6 +17,17 @@ type Session struct {
 var sessions = make(map[string]*Session)
 var sessionsMutex = sync.Mutex{}
 
+func init() {
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			sessionsMutex.Lock()
+			_prune()
+			sessionsMutex.Unlock()
+		}
+	}()
+}
+
 func NewSession(conf *config.Config) (*Session, *http.Cookie, error) {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
