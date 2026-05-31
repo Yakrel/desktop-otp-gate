@@ -186,7 +186,6 @@ function post() {
 }
 auth.addEventListener('input',()=>{
     auth.value=auth.value.replace(/\D/g,'').slice(0,6);
-    if(auth.value.length===6) post();
 });
 auth.addEventListener('keyup',event=>{if(event.key==='Enter') post();});
 
