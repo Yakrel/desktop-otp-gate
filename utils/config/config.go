@@ -2,9 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/pquerna/otp/totp"
+	"html"
 	"os"
 	"strconv"
+
+	"github.com/pquerna/otp/totp"
 )
 
 type Config struct {
@@ -59,6 +61,9 @@ func GetConfig() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid SNO_COOKIE_LENGTH\n%w", err)
 	}
+	if cookieLength < 1 {
+		return nil, fmt.Errorf("SNO_COOKIE_LENGTH must be >= 1, got %d", cookieLength)
+	}
 
 	cookieLifetime, err := strconv.ParseInt(_getEnv("SNO_COOKIE_LIFETIME", "14"), 10, 16)
 	if err != nil {
@@ -86,10 +91,13 @@ func GetConfig() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid SNO_RATE_LIMIT_COUNT\n%w", err)
 	}
+	if rateLimitCount < 1 {
+		return nil, fmt.Errorf("SNO_RATE_LIMIT_COUNT must be >= 1, got %d", rateLimitCount)
+	}
 
 	rateLimitExpiry, err := strconv.ParseInt(_getEnv("SNO_RATE_LIMIT_LIFETIME", "1"), 10, 16)
 	if err != nil {
-		return nil, fmt.Errorf("invalid SNO_RATE_LIMIT_COUNT\n%w", err)
+		return nil, fmt.Errorf("invalid SNO_RATE_LIMIT_LIFETIME\n%w", err)
 	}
 
 	config = &Config{
@@ -112,14 +120,15 @@ func GetConfig() (*Config, error) {
 }
 
 func _getEnv(env string, def string) string {
-	val := os.Getenv(env)
-	if val == "" {
+	val, exists := os.LookupEnv(env)
+	if !exists {
 		return def
 	}
 	return val
 }
 
 func buildHTML(title string) string {
+	title = html.EscapeString(title)
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
