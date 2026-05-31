@@ -149,18 +149,88 @@ button:hover{background:#7dd3fc}
 <div class="mark">#</div>
 <h1>` + title + `</h1>
 <p>Enter the 6-digit code from your authenticator app.</p>
-<label for="auth">Authenticator code</label>
 <div class="row">
 <input id="auth" name="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" autofocus>
 <button onclick="post()">Verify</button>
 </div>
+<div id="status-box" style="margin-top: 16px; padding: 12px; border-radius: 10px; font-size: 13px; line-height: 1.4; display: none;"></div>
 <p class="hint">Access is rate limited after repeated failed attempts.</p>
 </main>
 <script>
 const auth=document.getElementById('auth');
-function post(){const value=auth.value.replace(/\s+/g,'');if(value){window.location.href='?otp='+encodeURIComponent(value);}}
-auth.addEventListener('input',()=>{auth.value=auth.value.replace(/\D/g,'').slice(0,6);if(auth.value.length===6)post();});
-auth.addEventListener('keyup',event=>{if(event.key==='Enter')post();});
+function post() {
+    const value = auth.value.replace(/\s+/g, '');
+    if (value) {
+        auth.disabled = true;
+        fetch('?otp=' + encodeURIComponent(value))
+        .then(response => {
+            if (response.status === 200) {
+                window.location.href = response.url || '/';
+            } else {
+                window.location.href = window.location.pathname;
+            }
+        })
+        .catch(err => {
+            window.location.href = window.location.pathname;
+        });
+    }
+}
+auth.addEventListener('input',()=>{
+    auth.value=auth.value.replace(/\D/g,'').slice(0,6);
+    if(auth.value.length===6) post();
+});
+auth.addEventListener('keyup',event=>{if(event.key==='Enter') post();});
+
+const statusData = {
+    isLimited: {{.IsLimited}},
+    remaining: {{.Remaining}},
+    lockTime: {{.LockTime}},
+    maxAttempts: {{.MaxAttempts}}
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    const statusDiv = document.getElementById('status-box');
+    const btnEl = document.querySelector('button');
+    
+    if (statusData.isLimited) {
+        statusDiv.style.background = 'rgba(239, 68, 68, 0.15)';
+        statusDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+        statusDiv.style.color = '#fca5a5';
+        statusDiv.style.display = 'block';
+        
+        auth.disabled = true;
+        btnEl.disabled = true;
+        btnEl.style.opacity = '0.5';
+        btnEl.style.cursor = 'not-allowed';
+        
+        let timeLeft = statusData.lockTime;
+        const updateTimer = () => {
+            if (timeLeft <= 0) {
+                statusDiv.innerHTML = '<strong>Lock expired.</strong> Please refresh the page to try again.';
+                statusDiv.style.background = 'rgba(16, 185, 129, 0.15)';
+                statusDiv.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                statusDiv.style.color = '#a7f3d0';
+                auth.disabled = false;
+                btnEl.disabled = false;
+                btnEl.style.opacity = '1';
+                btnEl.style.cursor = 'pointer';
+                return;
+            }
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            statusDiv.innerHTML = '<strong>Too many failed attempts.</strong><br>Locked out. Try again in <strong>' + mins + 'm ' + secs + 's</strong>.';
+            timeLeft--;
+            setTimeout(updateTimer, 1000);
+        };
+        updateTimer();
+    } else if (statusData.remaining < statusData.maxAttempts) {
+        statusDiv.style.background = 'rgba(245, 158, 11, 0.15)';
+        statusDiv.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+        statusDiv.style.color = '#fcd34d';
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = '<strong>Invalid code.</strong><br>You have <strong>' + statusData.remaining + '</strong> attempts remaining.';
+    }
+});
 </script>
 </body>
 </html>`

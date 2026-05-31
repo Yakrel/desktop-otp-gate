@@ -29,7 +29,7 @@ func main() {
 		w.Header().Set("Content-Type", "image/png")
 		w.Write(decode)
 	})
-	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
 		ip := r.Header.Get("X-Real-Ip")
 		if ip == "" && r.Header.Get("X-Forwarded-For") != "" {
 			split := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
@@ -91,8 +91,15 @@ func main() {
 			w.Header().Set("Set-Cookie", cookie.String())
 		}
 
-		// check otp query param
-		otp := r.URL.Query().Get("otp")
+		// check otp query param or POST form value
+		var otp string
+		if r.Method == "POST" {
+			_ = r.ParseForm()
+			otp = r.FormValue("otp")
+		} else {
+			otp = r.URL.Query().Get("otp")
+		}
+
 		if otp != "" {
 			log.Printf("`%s` attempted authentication", ip)
 			if !ratelimits.IsLimited(conf, ip) {
@@ -103,12 +110,25 @@ func main() {
 					return
 				}
 			}
+
+			// Post/Redirect/Get pattern: redirect failed POST attempt to GET /sno so that F5/reload doesn't resubmit or reset lockouts
+			if r.Method == "POST" {
+				http.Redirect(w, r, r.URL.Path, 303)
+				return
+			}
 		}
 
-		// return form
+		// return form with dynamic rate limit status
+		status := ratelimits.GetStatus(conf, ip)
+		htmlStr := string(conf.HTML)
+		htmlStr = strings.ReplaceAll(htmlStr, "{{.IsLimited}}", fmt.Sprintf("%t", status.IsLimited))
+		htmlStr = strings.ReplaceAll(htmlStr, "{{.Remaining}}", fmt.Sprintf("%d", status.Remaining))
+		htmlStr = strings.ReplaceAll(htmlStr, "{{.LockTime}}", fmt.Sprintf("%d", status.LockTime))
+		htmlStr = strings.ReplaceAll(htmlStr, "{{.MaxAttempts}}", fmt.Sprintf("%d", conf.RateLimitCount))
+
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(401)
-		w.Write(conf.HTML)
+		w.Write([]byte(htmlStr))
 		return
 	})
 

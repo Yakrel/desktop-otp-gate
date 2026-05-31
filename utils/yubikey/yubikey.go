@@ -8,6 +8,8 @@ import (
 	"simple-nginx-otp/utils/rand"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 var API_COUNT = 5
@@ -17,9 +19,19 @@ func Validate(otp string, id string) bool {
 	if length < 32 || length > 48 || !strings.HasPrefix(otp, id) {
 		return false
 	}
+	
 	ch := make(chan bool, API_COUNT)
+	var wg sync.WaitGroup
+	var once sync.Once
+	
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	
 	for i := 1; i <= API_COUNT; i++ {
+		wg.Add(1)
 		go func(i int) {
+			defer wg.Done()
 			api := ""
 			if i > 1 {
 				api = strconv.Itoa(i)
@@ -29,21 +41,18 @@ func Validate(otp string, id string) bool {
 				log.Printf("failed to generate random string failed\n%s", err)
 				return
 			}
-			resp, err := http.Get(fmt.Sprintf("https://api%s.yubico.com/wsapi/2.0/verify?id=1&otp=%s&nonce=%s", api, otp, nonce))
+			resp, err := client.Get(fmt.Sprintf("https://api%s.yubico.com/wsapi/2.0/verify?id=1&otp=%s&nonce=%s", api, otp, nonce))
 			if err != nil {
 				log.Printf("failed to contact api %d\n%s", i, err)
 				return
 			}
+			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				log.Printf("failed to read api %d body\n%s", i, err)
 				return
 			}
-			err = resp.Body.Close()
-			if err != nil {
-				log.Printf("failed to close api %d body\n%s", i, err)
-				return
-			}
+			
 			lines := strings.Split(string(body), "\n")
 			checks := 0
 			for _, line := range lines {
@@ -70,16 +79,29 @@ func Validate(otp string, id string) bool {
 					checks++
 				case "status":
 					if val != "OK" {
-						ch<-false
+						once.Do(func() {
+							ch <- false
+						})
 						return
 					}
 					checks++
 				}
 				if checks == 3 {
-					ch<-true
+					once.Do(func() {
+						ch <- true
+					})
+					return
 				}
 			}
 		}(i)
 	}
+	
+	go func() {
+		wg.Wait()
+		once.Do(func() {
+			ch <- false
+		})
+	}()
+	
 	return <-ch
 }
