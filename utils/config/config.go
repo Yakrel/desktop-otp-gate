@@ -19,6 +19,7 @@ type Config struct {
 	CookieLength    int8
 	CookieLifetime  int16
 	CookieMinutes   int32
+	IdleMinutes     int32
 	SessionCookie   bool
 	CookieSecure    bool
 	CookieDomain    string
@@ -75,6 +76,14 @@ func GetConfig() (*Config, error) {
 		return nil, fmt.Errorf("invalid SNO_COOKIE_LIFETIME_MINUTES\n%w", err)
 	}
 
+	idleMinutes, err := strconv.ParseInt(_getEnv("SNO_IDLE_TIMEOUT_MINUTES", "0"), 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("invalid SNO_IDLE_TIMEOUT_MINUTES\n%w", err)
+	}
+	if idleMinutes < 0 {
+		return nil, fmt.Errorf("SNO_IDLE_TIMEOUT_MINUTES must be >= 0, got %d", idleMinutes)
+	}
+
 	sessionCookie, err := strconv.ParseBool(_getEnv("SNO_SESSION_COOKIE", "false"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid SNO_SESSION_COOKIE\n%w", err)
@@ -110,6 +119,7 @@ func GetConfig() (*Config, error) {
 		CookieLength:    int8(cookieLength),
 		CookieLifetime:  int16(cookieLifetime),
 		CookieMinutes:   int32(cookieMinutes),
+		IdleMinutes:     int32(idleMinutes),
 		SessionCookie:   sessionCookie,
 		CookieSecure:    cookieSecure,
 		CookieDomain:    cookieDomain,

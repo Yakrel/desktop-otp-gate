@@ -76,3 +76,68 @@ func TestSessionCookie(t *testing.T) {
 		t.Errorf("`%s` expires too late", session.Expiry)
 	}
 }
+
+func TestIdleTimeout(t *testing.T) {
+	conf := &config.Config{
+		CookieName:   "idle_test",
+		CookieLength: 4,
+		IdleMinutes:  15,
+	}
+	session, cookie, err := NewSession(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if session.IdleTimeout != 15*time.Minute {
+		t.Fatalf("expected IdleTimeout 15m, got %v", session.IdleTimeout)
+	}
+
+	// Active session should be returned
+	got := GetSession(cookie.Value)
+	if got == nil {
+		t.Fatal("expected session to be found")
+	}
+
+	// Simulate idle expiration
+	session.LastActivity = time.Now().Add(-16 * time.Minute)
+	gotExpired := GetSession(cookie.Value)
+	if gotExpired != nil {
+		t.Fatal("expected session to be expired and nil returned")
+	}
+}
+
+func TestTouchSession(t *testing.T) {
+	conf := &config.Config{
+		CookieName:   "touch_test",
+		CookieLength: 4,
+		IdleMinutes:  10,
+	}
+	session, cookie, err := NewSession(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	oldTime := time.Now().Add(-5 * time.Minute)
+	session.LastActivity = oldTime
+	TouchSession(cookie.Value)
+
+	if !session.LastActivity.After(oldTime) {
+		t.Fatal("expected LastActivity to be updated to current time")
+	}
+}
+
+func TestDeleteSession(t *testing.T) {
+	conf := &config.Config{
+		CookieName:   "del_test",
+		CookieLength: 4,
+	}
+	_, cookie, err := NewSession(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	DeleteSession(cookie.Value)
+	got := GetSession(cookie.Value)
+	if got != nil {
+		t.Fatal("expected session to be deleted")
+	}
+}

@@ -6,8 +6,10 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pquerna/otp/totp"
@@ -24,7 +26,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	router := setupRouter(conf)
 
+	addr := net.JoinHostPort(conf.IP, strconv.Itoa(conf.Port))
+	log.Printf("listening on http://%s", addr)
+	err = http.ListenAndServe(addr, router)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func setupRouter(conf *config.Config) *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
@@ -55,8 +67,35 @@ func main() {
 			session = sessions.GetSession(cookie.Value)
 		}
 
+		// handle logout
+		if r.URL.Path == "/sno/logout" || r.URL.Path == "/logout" || r.URL.Query().Get("logout") != "" {
+			if cookie != nil && cookie.Value != "" {
+				sessions.DeleteSession(cookie.Value)
+			}
+			expiredCookie := &http.Cookie{
+				Name:     conf.CookieName,
+				Value:    "",
+				Path:     "/",
+				Expires:  time.Unix(0, 0),
+				MaxAge:   -1,
+				HttpOnly: true,
+				Secure:   conf.CookieSecure,
+				SameSite: http.SameSiteLaxMode,
+			}
+			if conf.CookieDomain != "" {
+				expiredCookie.Domain = conf.CookieDomain
+			}
+			http.SetCookie(w, expiredCookie)
+			log.Printf("`%s` logged out", ip)
+			http.Redirect(w, r, "/sno", http.StatusFound)
+			return
+		}
+
 		// already authorized, send 200
 		if session != nil && session.Authorized {
+			if cookie != nil {
+				sessions.TouchSession(cookie.Value)
+			}
 			w.WriteHeader(200)
 			return
 		}
@@ -83,7 +122,6 @@ func main() {
 
 		// user is redirected to SNO
 		if session == nil {
-			var cookie *http.Cookie
 			var err error
 			session, cookie, err = sessions.NewSession(conf)
 			if err != nil {
@@ -114,6 +152,9 @@ func main() {
 			if !ratelimits.IsLimited(conf, ip) {
 				if (len(otp) == 6 && conf.Secret != "" && totp.Validate(otp, conf.Secret)) || (len(otp) >= 6 && conf.YubiOTP != "" && yubikey.Validate(otp, conf.YubiOTP)) {
 					session.Authorized = true
+					if cookie != nil {
+						sessions.TouchSession(cookie.Value)
+					}
 					dest := session.Redirect
 					if !strings.HasPrefix(dest, "/") {
 						dest = "/"
@@ -145,9 +186,5 @@ func main() {
 		return
 	})
 
-	log.Printf("listening on http://%s:%d", conf.IP, conf.Port)
-	err = http.ListenAndServe(fmt.Sprintf("%s:%d", conf.IP, conf.Port), router)
-	if err != nil {
-		log.Fatal(err)
-	}
+	return router
 }
