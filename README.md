@@ -16,6 +16,7 @@ This fork keeps the original minimal reverse-auth design and adds a dark login s
 - Minute-based session lifetime support
 - Sliding session idle/inactivity timeout support
 - Explicit logout endpoint (`/sno/logout` or `/logout`)
+- Active session dashboard on `/sno` with one-click logout button
 
 ### Environment Variables
 | Environment             | Default value    | Description                                                                                                                                             |

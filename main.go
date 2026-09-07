@@ -96,6 +96,20 @@ func setupRouter(conf *config.Config) *chi.Mux {
 			if cookie != nil {
 				sessions.TouchSession(cookie.Value)
 			}
+
+			redirect := r.Header.Get("X-Original-URI")
+			r.URL.Scheme = r.Header.Get("X-Forwarded-Proto")
+			if r.URL.Scheme == "" {
+				r.URL.Scheme = "https"
+			}
+			requestURL := r.URL.Scheme + "://" + r.Host + r.RequestURI
+			if redirect == "" || redirect == requestURL {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(200)
+				w.Write(conf.ActiveHTML)
+				return
+			}
+
 			w.WriteHeader(200)
 			return
 		}

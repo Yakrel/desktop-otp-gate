@@ -15,6 +15,7 @@ type Config struct {
 	Secret          string
 	YubiOTP         string
 	HTML            []byte
+	ActiveHTML      []byte
 	CookieName      string
 	CookieLength    int8
 	CookieLifetime  int16
@@ -55,6 +56,7 @@ func GetConfig() (*Config, error) {
 
 	title := _getEnv("SNO_TITLE", "Simple Nginx OTP")
 	var html = buildHTML(title)
+	var activeHTML = buildActiveSessionHTML(title)
 
 	cookieName := _getEnv("SNO_COOKIE_NAME", "sno_session")
 
@@ -115,6 +117,7 @@ func GetConfig() (*Config, error) {
 		Secret:          secret,
 		YubiOTP:         yubiotp,
 		HTML:            []byte(html),
+		ActiveHTML:      []byte(activeHTML),
 		CookieName:      cookieName,
 		CookieLength:    int8(cookieLength),
 		CookieLifetime:  int16(cookieLifetime),
@@ -250,6 +253,50 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 </script>
+</body>
+</html>`
+}
+
+func buildActiveSessionHTML(title string) string {
+	title = html.EscapeString(title)
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>` + title + `</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{min-height:100vh;margin:0;display:grid;place-items:center;background:#080b12;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body:before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 50% 0%,rgba(16,185,129,.18),transparent 32rem),linear-gradient(145deg,#070a11 0%,#111827 52%,#05070b 100%);z-index:-1}
+main{width:min(92vw,390px);padding:32px;border:1px solid rgba(148,163,184,.22);background:rgba(15,23,42,.82);box-shadow:0 28px 70px rgba(0,0,0,.48);backdrop-filter:blur(18px);border-radius:18px}
+.mark{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:20px;background:#10b981;color:#022c22;font-weight:800;font-size:22px}
+.badge{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:14px}
+.dot{width:7px;height:7px;border-radius:50%;background:#10b981}
+h1{margin:0 0 8px;font-size:24px;line-height:1.15;font-weight:720}
+p{margin:0 0 24px;color:#94a3b8;line-height:1.5;font-size:14px}
+.actions{display:flex;flex-direction:column;gap:10px}
+.btn{display:flex;align-items:center;justify-content:center;height:46px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;transition:all .15s}
+.btn-primary{background:#38bdf8;color:#00111f}
+.btn-primary:hover{background:#7dd3fc}
+.btn-danger{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.22);border-color:rgba(239,68,68,.45)}
+.hint{margin-top:20px;margin-bottom:0;color:#64748b;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<main>
+<div class="mark">✓</div>
+<div class="badge"><span class="dot"></span>Session Active</div>
+<h1>` + title + `</h1>
+<p>You are currently authenticated. You can return to the application or log out to terminate this session.</p>
+<div class="actions">
+<a href="/" class="btn btn-primary">Return to Application</a>
+<a href="/sno/logout" class="btn btn-danger">Log Out</a>
+</div>
+<p class="hint">Logging out immediately removes access and requires OTP to sign in again.</p>
+</main>
 </body>
 </html>`
 }
