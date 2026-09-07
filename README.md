@@ -14,6 +14,9 @@ This fork keeps the original minimal reverse-auth design and adds a dark login s
 - YubiOTP support
 - Rate limiting support
 - Minute-based session lifetime support
+- Sliding session idle/inactivity timeout support
+- Explicit logout endpoint (`/sno/logout` or `/logout`)
+- Active session dashboard on `/sno` with one-click logout button
 
 ### Environment Variables
 | Environment             | Default value    | Description                                                                                                                                             |
@@ -28,6 +31,7 @@ This fork keeps the original minimal reverse-auth design and adds a dark login s
 | SNO_COOKIE_LIFETIME     | 14               | Session cookie lifetime in days. Ignored when `SNO_COOKIE_LIFETIME_MINUTES` is greater than zero                                                        |
 | SNO_COOKIE_LIFETIME_MINUTES | 0            | Session cookie lifetime in minutes. Use this for shorter sessions, for example `60` for one hour                                                        |
 | SNO_SESSION_COOKIE      | false            | If true, the browser cookie has no Expires attribute and lasts until the browser clears session cookies                                                  |
+| SNO_IDLE_TIMEOUT_MINUTES | 0                | Sliding session inactivity timeout in minutes. If greater than 0, session expires after N minutes of inactivity. Default 0 (disabled)                  |
 | SNO_COOKIE_SECURE       | true             | Add the Secure flag to the session cookie                                                                                                                |
 | SNO_COOKIE_DOMAIN       |                  | Session cookie domain. If empty, default to current domain                                                                                              |
 | SNO_RATE_LIMIT_COUNT    | 3                | How many failures till rate limit kicks in                                                                                                              |
@@ -58,6 +62,7 @@ docker run -d \
   -e SNO_COOKIE_LENGTH=16 \
   -e SNO_COOKIE_LIFETIME_MINUTES=60 \
   -e SNO_SESSION_COOKIE=false \
+  -e SNO_IDLE_TIMEOUT_MINUTES=15 \
   -e SNO_COOKIE_SECURE=true \
   -e SNO_COOKIE_DOMAIN="" \
   -e SNO_RATE_LIMIT_COUNT=3 \
@@ -88,6 +93,7 @@ desktop-otp-gate:
         - SNO_COOKIE_LIFETIME_MINUTES=60
         - SNO_SESSION_COOKIE=false
         - SNO_COOKIE_SECURE=true
+        - SNO_IDLE_TIMEOUT_MINUTES=15
         - SNO_COOKIE_DOMAIN=""
         - SNO_RATE_LIMIT_COUNT=3
         - SNO_RATE_LIMIT_LIFETIME=1
@@ -111,6 +117,7 @@ export SNO_COOKIE_LIFETIME_MINUTES=60
 export SNO_SESSION_COOKIE=false
 export SNO_COOKIE_SECURE=true
 export SNO_COOKIE_DOMAIN=""
+export SNO_IDLE_TIMEOUT_MINUTES=15
 export SNO_RATE_LIMIT_COUNT=3
 export SNO_RATE_LIMIT_LIFETIME=1
 ./simple-nginx-otp.linux-(arch)
