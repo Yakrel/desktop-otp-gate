@@ -51,11 +51,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
 
       - name: Clean up old package versions
         uses: actions/delete-package-versions@v5
         with:
           package-name: 'desktop-otp-gate'
           package-type: 'container'
-          min-versions-to-keep: 5
-          delete-only-untagged-versions: 'true'
+          min-versions-to-keep: 2
+          delete-only-untagged-versions: 'false'
